@@ -1,20 +1,22 @@
-# Bisq
+## Run Bisq from source
 
-[![Build Status](https://travis-ci.org/bisq-network/bisq.svg?branch=master)](https://travis-ci.org/bisq-network/bisq)
+### Pre-requisites
 
+* You have installed Java v10 or higher
+  * Check by running `java --version`
+* You have installed git lfs
+  * Check by running `git lfs version`
+  * If not available, get it and install it from the [git lfs repo](https://github.com/git-lfs/git-lfs/releases)
 
-## What is Bisq?
+### Get Bisq code
 
-Bisq is a safe, private and decentralized way to exchange bitcoin for national currencies and other digital assets. Bisq uses peer-to-peer networking and multi-signature escrow to facilitate trading without a third party. Bisq is non-custodial and incorporates a human arbitration system to resolve disputes.
-
-To learn more, see the doc and video at https://bisq.network/intro.
-
-
-## Get started using Bisq
-
-Follow the step-by-step instructions at https://bisq.network/get-started.
-
-
-## Contribute to Bisq
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [developer docs](docs/README.md).
+* Clone the Bisq repo
+  * `git clone https://github.com/bisq-network/bisq.git`
+* Go inside the cloned Bisq git repo
+  * `cd bisq`
+* Switch to a specific release (for example, v1.3.4)
+  * `git checkout tags/v1.3.4`
+* Build it
+  * `./gradlew build`
+* Run it
+  * `./bisq-desktop`
