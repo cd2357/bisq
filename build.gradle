@@ -488,6 +488,7 @@ configure(project(':pricenode')) {
         compile("org.knowm.xchange:xchange-quoine:$knowmXchangeVersion")
         compile("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
         compile("org.springframework.boot:spring-boot-starter-actuator")
+        testCompile "org.mockito:mockito-core:$mockitoVersion"
         testCompile "org.junit.jupiter:junit-jupiter-api:$jupiterVersion"
         testCompile "org.junit.jupiter:junit-jupiter-params:$jupiterVersion"
         testRuntime("org.junit.jupiter:junit-jupiter-engine:$jupiterVersion")
@@ -497,7 +498,7 @@ configure(project(':pricenode')) {
 
     test {
         useJUnitPlatform()
-        
+
         // Disabled by default, since spot provider tests include connections to external API endpoints
         // Can be enabled by adding -Dtest.pricenode.includeSpotProviderTests=true to the gradle command:
         // ./gradlew test -Dtest.pricenode.includeSpotProviderTests=true

@@ -17,6 +17,8 @@
 
 package bisq.price.spot;
 
+import bisq.price.spot.providers.WeightedAverage;
+
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -28,8 +30,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,6 +100,7 @@ class ExchangeRateService {
         // Query all providers and collect all exchange rates, grouped by currency code
         // key = currency code
         // value = list of exchange rates
+        // TODO Change List<ExchangeRate> to Map<Class<? extends ExchangeRateProvider>, ExchangeRate> for faster lookups in the loop below
         Map<String, List<ExchangeRate>> currencyCodeToExchangeRates = getCurrencyCodeToExchangeRates();
 
         // For each currency code, calculate aggregate rate
@@ -112,11 +117,35 @@ class ExchangeRateService {
                 // from that provider
                 aggregateExchangeRate = exchangeRateList.get(0);
             } else {
-                // If multiple providers have rates for this currency, then
-                // aggregate = average of the rates
-                OptionalDouble opt = exchangeRateList.stream().mapToDouble(ExchangeRate::getPrice).average();
-                // List size > 1, so opt is always set
-                double priceAvg = opt.orElseThrow(IllegalStateException::new);
+
+                // weighted avg logic
+
+                Map<Class<? extends ExchangeRateProvider>, Double> avgWeights = WeightedAverage.getWeightsForCurrencySwitch(currencyCode);
+
+                double weightedAvgNumerator = 0d;
+                double weightedAvgDenominator = 0d;
+                for (ExchangeRate exchangeRate : exchangeRateList) {
+
+                    // Find the provider referenced by this ExchangeRate
+                    // TODO Optimize lookup, see above
+                    Optional<Class<? extends ExchangeRateProvider>> providerClass = avgWeights.keySet().stream()
+                            .filter(k -> k.getName().equals(exchangeRate.getProvider()))
+                            .findFirst();
+
+                    Double weight = avgWeights.get(providerClass);
+
+                    // Update numerator = current value + (weight x price)
+                    weightedAvgNumerator += weight * exchangeRate.getPrice();
+
+                    // Update denominator = current value + weight
+                    weightedAvgDenominator += weight;
+                };
+
+                // Avoid division by zero
+                // In the case that all weights are 0, then set denominator to 1
+                // TODO Check it works
+//                weightedAvgDenominator.getAndUpdate(v -> v == 0 ? 1 : v);
+                double priceAvg = weightedAvgNumerator / weightedAvgDenominator;
 
                 aggregateExchangeRate = new ExchangeRate(
                         currencyCode,
@@ -128,6 +157,11 @@ class ExchangeRateService {
         });
 
         return aggregateExchangeRates;
+    }
+
+    private Double getWeightedAverageForCurrency(String currencyCode) {
+
+        return 0d;
     }
 
     /**

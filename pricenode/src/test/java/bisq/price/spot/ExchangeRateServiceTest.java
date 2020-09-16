@@ -17,6 +17,8 @@
 
 package bisq.price.spot;
 
+import bisq.price.spot.providers.WeightedAverage;
+
 import com.google.common.collect.Sets;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -30,8 +32,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
@@ -40,6 +45,8 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+
+import lombok.extern.slf4j.Slf4j;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -50,6 +57,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.mockito.Mockito.when;
+
+@Slf4j
 public class ExchangeRateServiceTest {
 
     /**
@@ -99,6 +109,9 @@ public class ExchangeRateServiceTest {
         assertTrue(logsList.get(0).getMessage().endsWith("No exchange rate data found for " + dummyProvider.getName()));
     }
 
+    /**
+     * Scenario: single provider, single exchange rate
+     */
     @Test
     public void getAllMarketPrices_withSingleExchangeRate() {
         int numberOfCurrencyPairsOnExchange = 1;
@@ -113,6 +126,9 @@ public class ExchangeRateServiceTest {
         assertNotEquals(0L, retrievedData.get(dummyProvider.getPrefix() + "Ts"));
     }
 
+    /**
+     * Scenario: multiple providers, providing rates for different currencies
+     */
     @Test
     public void getAllMarketPrices_withMultipleProviders_differentCurrencyCodes() {
         int numberOfCurrencyPairsOnExchange = 1;
@@ -131,7 +147,7 @@ public class ExchangeRateServiceTest {
     }
 
     /**
-     * Tests the scenario when multiple providers have rates for the same currencies
+     * Scenario: multiple providers, providing rates for the same currencies
      */
     @Test
     public void getAllMarketPrices_withMultipleProviders_overlappingCurrencyCodes() {
@@ -176,6 +192,16 @@ public class ExchangeRateServiceTest {
         List<String> retrievedMarketPricesData = (List<String>) retrievedData.get("data");
         assertEquals(numberOfCurrencyPairsOnExchange, retrievedMarketPricesData.size());
     }
+
+    // TODO Test: what happens if weights defined, but no provider returns a rate?
+
+    // TODO Test: What happens if weights are defined for providers p1, p2 but then also p3 returns a rate?
+
+    // TODO Test: What happens when no weights defined, but 1 provider returns rate?
+
+    // TODO Test: What happens when no weights defined, but multiple providers return rate?
+
+    // TODO Test: What happens when weights are all zero? (evtl leading to div by zero risk)
 
     /**
      * Performs generic sanity checks on the response format and contents.
@@ -233,21 +259,59 @@ public class ExchangeRateServiceTest {
             }
         }
 
+
+        // TODO For each provider that has rate for this currency, set rate
+        // Build map
+        // Give to mockito when/thenReturn
+
+//        Random rand = new Random();
+//
+//        // Specify test weights for each currency code
+//        currencyCodeToExchangeRateFromService.entrySet().forEach(entry -> {
+//            // Generate random weights for the specified providers
+//            AtomicReference<Double> weight = new AtomicReference<>(Double.valueOf(1));
+//            Map<Class<? extends ExchangeRateProvider>, Double> weights =
+//                    entry.getValue().stream().collect(
+//                    Collectors.toMap(
+//                            ExchangeRateProvider::getClass,
+//                            x -> weight.getAndSet(weight.get() + 1)));
+//            log.info("Generated weights for currency " + entry.getKey() + ": " + weights);
+//            when(WeightedAverage.getWeightsForCurrencySwitch(entry.getKey())).thenReturn(weights);
+//        });
+
+
+
         // For each ExchangeRate which is covered by multiple providers, ensure the rate
-        // value is an average
+        // value is the weighted average
         currencyCodeToExchangeRatesFromProviders.forEach((currencyCode, exchangeRateList) -> {
             ExchangeRate rateFromService = currencyCodeToExchangeRateFromService.get(currencyCode);
             double priceFromService = rateFromService.getPrice();
 
-            OptionalDouble opt = exchangeRateList.stream().mapToDouble(ExchangeRate::getPrice).average();
-            double priceAvgFromProviders = opt.getAsDouble();
+            // Calculate the expected weighted avg, based on the specified avg weights
+            double weightedAvgNumerator = 0d;
+            double weightedAvgDenominator = 0d;
+            double weight = Double.valueOf(1);
+            for (ExchangeRate er : exchangeRateList) {
+
+                // In this test, we just assign incremental weights (1, 2, 3.. etc)
+                // to each provider
+                weight += 1;
+
+                // Update numerator = current value + (weight x price)
+                weightedAvgNumerator += weight * er.getPrice();
+
+                // Update denominator = current value + weight
+                weightedAvgDenominator += weight;
+            }
+
+            double expectedPriceAvg = weightedAvgNumerator / weightedAvgDenominator;
 
             // Ensure that the ExchangeRateService correctly aggregates exchange rates
             // from multiple providers. If multiple providers contain rates for a
             // currency, the service should return a single aggregate rate
             // Expected value for aggregate rate = avg(provider rates)
             // This formula works for any number of providers for a specific currency
-            assertEquals(priceFromService, priceAvgFromProviders, "Service returned incorrect aggregate rate");
+            assertEquals(priceFromService, expectedPriceAvg, "Service returned incorrect aggregate rate");
         });
     }
 
