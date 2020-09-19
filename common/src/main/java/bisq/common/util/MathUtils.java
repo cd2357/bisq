@@ -22,8 +22,14 @@ import com.google.common.math.DoubleMath;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class MathUtils {
     private static final Logger log = LoggerFactory.getLogger(MathUtils.class);
@@ -106,5 +112,69 @@ public class MathUtils {
             median = MathUtils.roundDoubleToLong((list[middle - 1] + list[middle]) / 2.0);
         }
         return median;
+    }
+
+    public static class MovingAverage {
+        Deque<Long> window;
+        private int size;
+        private long sum;
+        private double outlier;
+
+        // Outlier as ratio
+        public MovingAverage(int size, double outlier) {
+            this.size = size;
+            window = new ArrayDeque<>(size);
+            this.outlier = outlier;
+            sum = 0;
+        }
+
+        public Optional<Double> next(long val) {
+            try {
+                var fullAtStart = isFull();
+                if (fullAtStart) {
+                    if (outlier > 0) {
+                        // Return early if it's an outlier
+                        checkArgument(size != 0);
+                        var avg = (double) sum / size;
+                        if (Math.abs(avg - val) / avg > outlier) {
+                            return Optional.empty();
+                        }
+                    }
+                    sum -= window.remove();
+                }
+                window.add(val);
+                sum += val;
+                if (!fullAtStart && isFull() && outlier != 0) {
+                    removeInitialOutlier();
+                }
+                // When discarding outliers, the first n non discarded elements return Optional.empty()
+                return outlier > 0 && !isFull() ? Optional.empty() : current();
+            } catch (Throwable t) {
+                log.error(t.toString());
+                return Optional.empty();
+            }
+        }
+
+        boolean isFull() {
+            return window.size() == size;
+        }
+
+        private void removeInitialOutlier() {
+            var element = window.iterator();
+            while (element.hasNext()) {
+                var val = element.next();
+                int div = size - 1;
+                checkArgument(div != 0);
+                var avgExVal = (double) (sum - val) / div;
+                if (Math.abs(avgExVal - val) / avgExVal > outlier) {
+                    element.remove();
+                    break;
+                }
+            }
+        }
+
+        public Optional<Double> current() {
+            return window.size() == 0 ? Optional.empty() : Optional.of((double) sum / window.size());
+        }
     }
 }

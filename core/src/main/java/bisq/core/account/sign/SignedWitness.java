@@ -117,7 +117,7 @@ public class SignedWitness implements ProcessOncePersistableNetworkPayload, Pers
         return protobuf.PersistableNetworkPayload.newBuilder().setSignedWitness(builder).build();
     }
 
-    protobuf.SignedWitness toProtoSignedWitness() {
+    public protobuf.SignedWitness toProtoSignedWitness() {
         return toProtoMessage().getSignedWitness();
     }
 
@@ -168,7 +168,7 @@ public class SignedWitness implements ProcessOncePersistableNetworkPayload, Pers
     // Getters
     ///////////////////////////////////////////////////////////////////////////////////////////
 
-    P2PDataStorage.ByteArray getHashAsByteArray() {
+    public P2PDataStorage.ByteArray getHashAsByteArray() {
         return new P2PDataStorage.ByteArray(hash);
     }
 
