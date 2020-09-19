@@ -38,5 +38,9 @@ How about with branch protection?
 
 Incorrectly styled list:
 - item 1
- -  item 2
-* item 3
+- item 1
+
+Incorrectly(?) styled list 2:
+ - item 1
+* item 1
+  * sdfs
