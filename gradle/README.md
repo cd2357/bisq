@@ -40,7 +40,8 @@ Incorrectly styled list:
 - item 1
 - item 1
 
-Incorrectly(?) styled list 2:
- - item 1
-* item 1
-  * sdfs
+Let's see if this works:
+
+ - `bisq/gradle/wrapper/gradle-wrapper.jar`
+ - `bisq/gradlew`
+ - `bisq/gradlew.bat`
