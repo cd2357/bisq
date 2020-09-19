@@ -23,3 +23,5 @@ The second execution should then update:
  - `bisq/gradlew.bat`
 
 The four updated files are ready to be committed.
+
+test 123
