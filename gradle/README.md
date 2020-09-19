@@ -24,4 +24,4 @@ The second execution should then update:
 
 The four updated files are ready to be committed.
 
-test 123
+test 123-456
