@@ -35,3 +35,8 @@ Test list:
  - item 3
 
 How about with branch protection?
+
+Incorrectly styled list:
+- item 1
+ -  item 2
+* item 3
