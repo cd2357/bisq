@@ -24,4 +24,12 @@ The second execution should then update:
 
 The four updated files are ready to be committed.
 
+---
+
 test 123-456-x
+
+Test list:
+
+ - item 1
+ - item 2
+ - item 3
